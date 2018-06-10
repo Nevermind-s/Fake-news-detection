@@ -63,11 +63,13 @@ def getSentimentOfTitle(client):
     stops = stopwords.words("english")
     cursor = collection.find({})
     result = dict()
+    source = dict()
     for document in cursor:
         meaningfulWords = re.sub("[^a-zA-Z]"," ", document["title"])
         meaningfulWords = tb(meaningfulWords.lower())
         result[str(document["_id"])] = meaningfulWords.sentiment
-    return result
+        source[str(document["_id"])] = document["source"]
+    return result, source
 
 def getBadWords():
     badwords = json.load(open('badwords.json'))
@@ -80,14 +82,15 @@ def detectBadWords(meaningfulWords, badwords):
         numberOfBadWords = len([w for w in v if w in badwords])
         
 
-def getMostImportantWords(meaningfulWords, sentimentAnalysisOfTitle):
+def getMostImportantWords(meaningfulWords, sentimentAnalysisOfTitle, soruce):
     for k, v in meaningfulWords.items():
         #print("Top words in document {}".format(k))
         result = tb(" ".join(v))
         scores= {word : tfidf(word, result, meaningfulWords) for word in result.words}
         sorted_words = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-        getTypeOfNews(sorted_words[:10], k, sentimentAnalysisOfTitle)
-        if (k == '5aa108e4b3f7112e30054ede'): 
+        getTypeOfNews(sorted_words[:10], k, sentimentAnalysisOfTitle, source[k])
+        if (k == '5b1d669589ad9326d084f847'): 
+            print("sentiment: ", sentimentAnalysisOfTitle[k][1])
             for word, score in sorted_words[:10]:
                 print("Word: {}, TF-IDF: {}".format(word, round(score, 5)))
 
@@ -103,12 +106,14 @@ def idf(word, meaningfulWords):
 def tfidf(word, meaningfulWordsValue, meaningfulWords):
     return tf(word, meaningfulWordsValue) * idf(word, meaningfulWords)
 
-def getTypeOfNews(mostImportantWords, k, sentimentAnalysisOfTitle): 
+def getTypeOfNews(mostImportantWords, k, sentimentAnalysisOfTitle, source): 
     badWords = getBadWords()
     scoreOfBadWord = sum( 20 * score for w, score in mostImportantWords if w in badWords)
-    totalSatireScore = ( scoreOfBadWord + sentimentAnalysisOfTitle[k][1])
+    totalSatireScore = ( scoreOfBadWord + sentimentAnalysisOfTitle[k][1] ) 
     if(totalSatireScore > 0.5):
-        print(k, totalSatireScore)
+        print(k, "Satirical", totalSatireScore, source)
+    else: 
+        print(k, "Undetermined",totalSatireScore, source)
 
     
 
@@ -125,6 +130,6 @@ def getTypeOfNews(mostImportantWords, k, sentimentAnalysisOfTitle):
 if __name__ == '__main__':
     client = connecToDatabse()
     result = getMeaningfulWords(client)
-    sentimentAnalysisOfTitle = getSentimentOfTitle(client)
-    getMostImportantWords(result, sentimentAnalysisOfTitle)
+    sentimentAnalysisOfTitle, source = getSentimentOfTitle(client)
+    getMostImportantWords(result, sentimentAnalysisOfTitle, source)
 
