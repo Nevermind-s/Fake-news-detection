@@ -83,13 +83,14 @@ def detectBadWords(meaningfulWords, badwords):
         
 
 def getMostImportantWords(meaningfulWords, sentimentAnalysisOfTitle, soruce):
+    badWords = getBadWords()
     for k, v in meaningfulWords.items():
         #print("Top words in document {}".format(k))
         result = tb(" ".join(v))
         scores= {word : tfidf(word, result, meaningfulWords) for word in result.words}
         sorted_words = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-        getTypeOfNews(sorted_words[:10], k, sentimentAnalysisOfTitle, source[k])
-        if (k == '5b1d669589ad9326d084f847'): 
+        getTypeOfNews(sorted_words[:20], k, sentimentAnalysisOfTitle, source[k], badWords)
+        if (k == '5b1d669789ad9326d084f860'): 
             print("sentiment: ", sentimentAnalysisOfTitle[k][1])
             for word, score in sorted_words[:10]:
                 print("Word: {}, TF-IDF: {}".format(word, round(score, 5)))
@@ -106,14 +107,18 @@ def idf(word, meaningfulWords):
 def tfidf(word, meaningfulWordsValue, meaningfulWords):
     return tf(word, meaningfulWordsValue) * idf(word, meaningfulWords)
 
-def getTypeOfNews(mostImportantWords, k, sentimentAnalysisOfTitle, source): 
-    badWords = getBadWords()
-    scoreOfBadWord = sum( 20 * score for w, score in mostImportantWords if w in badWords)
-    totalSatireScore = ( scoreOfBadWord + sentimentAnalysisOfTitle[k][1] ) 
-    if(totalSatireScore > 0.5):
+def getTypeOfNews(mostImportantWords, k, sentimentAnalysisOfTitle, source, badWords): 
+    scoreOfBadWord = sum( 10 * score for w, score in mostImportantWords if w in badWords)
+    totalSatireScore = scoreOfBadWord + sentimentAnalysisOfTitle[k][1] + sentimentAnalysisOfTitle[k][0]
+
+    if(totalSatireScore >= 0.3):
         print(k, "Satirical", totalSatireScore, source)
     else: 
         print(k, "Undetermined",totalSatireScore, source)
+
+
+    
+
 
     
 
